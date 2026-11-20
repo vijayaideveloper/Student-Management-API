@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from app.database import Base, engine
 from routers.student_router import student_router
+from routers.course_router import course_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -16,3 +17,5 @@ def get_root():
     }
 
 app.include_router(student_router)
+
+app.include_router(course_router)

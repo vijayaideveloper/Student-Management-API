@@ -2,21 +2,24 @@ from fastapi import APIRouter,Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import get_db
 from schemas.schema import StudentBase, StudentResponse
-from app.models import Students, Courses
+from app.models import Students
 
 
 
-student_router = APIRouter(prefix='/students', tags=['Manage Students'])
+student_router = APIRouter(prefix='/students', 
+                           tags=['Manage Students'])
 
 
-@student_router.get('/')
+@student_router.get('/',
+                    response_model=list[StudentResponse])
 
 def get_students(db : Session = Depends(get_db)):
     students = db.query(Students).all()
 
     return students
 
-@student_router.get('/{id}')
+@student_router.get('/{id}',
+                    response_model=StudentResponse)
 
 def get_student(stu_id : int,
                 db : Session = Depends(get_db)):
@@ -32,10 +35,20 @@ def get_student(stu_id : int,
 
 
 @student_router.post('/create',
+                     response_model=StudentResponse,
                      status_code=status.HTTP_201_CREATED)
 
 def create_student(student : StudentBase,
                    db : Session = Depends(get_db)):
+    
+    existing = db.query(Students).filter(
+        Students.register_no==student.register_no).first()
+    
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail="Register number already exists"
+        )
     
     new_student = Students(**student.model_dump())
 
@@ -45,54 +58,54 @@ def create_student(student : StudentBase,
     db.refresh(new_student)
 
     return {
-        "Successfully added" : new_student
+        "message" : "student created",
+        "student id": new_student.stu_id
     }
 
-@student_router.put('/update/{id}',
+
+
+@student_router.put('/update/{stu_id}',
+                    response_model=StudentResponse,
                     status_code=status.HTTP_202_ACCEPTED)
 
-def update_student(id : int,
+def update_student(stu_id : int,
                    student : StudentBase,
                    db : Session = Depends(get_db)):
 
-    existed_student = db.query(Students).filter(Students.stu_id == id).first()
+    existed_student = db.query(Students).filter(Students.stu_id == stu_id).first()
 
     if existed_student is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail=f"Student (id : {id}) is Not Found in database")
+                            detail=f"Student (id : {stu_id}) is Not Found in database")
 
-    existed_student.name = student.name
-    existed_student.age = student.age
-    existed_student.register_no = student.register_no
-    existed_student.year = student.year
-    existed_student.dept = student.dept
-    existed_student.city = student.city
-    existed_student.state = student.state
-    existed_student.email = student.email
-    existed_student.phone_no = student.phone_no
+    for key, value in student.model_dump().items():
+        setattr(existed_student, key, value)
+
 
     db.commit()
 
     db.refresh(existed_student)
 
     return {
-        "Updated Student" : existed_student
+        "message" : "updated success",
+        "student id" : existed_student.stu_id
     }
     
 
-@student_router.delete('/delete/{id}')
+@student_router.delete('/delete/{stu_id}')
 
-def delete_student(id : int,
+def delete_student(stu_id : int,
                    db : Session = Depends(get_db)):
 
-    existed_student = db.query(Students).filter(Students.stu_id == id).first()
+    existed_student = db.query(Students).filter(Students.stu_id == stu_id).first()
     if existed_student is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail=f"Student (id : {id}) is Not Found in database")
+                            detail=f"Student (id : {stu_id}) is Not Found in database")
 
     db.delete(existed_student)
     db.commit()
 
     return {
-        "Deleted Successfull" : existed_student
+        "message" : "deleted success",
+        "student id": stu_id
     }

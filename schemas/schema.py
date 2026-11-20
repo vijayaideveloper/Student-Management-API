@@ -2,14 +2,17 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 from typing import Optional, List
 
 
+
 class CourseBase(BaseModel):
     
-    stud_id : int
+    stu_id : int
     course: str
 
-class CourseResponse(CourseBase):
+class CourseResponse(BaseModel):
 
     course_id : int
+    stu_id : int
+    course : str
     
 
 
@@ -26,6 +29,16 @@ class StudentBase(BaseModel):
 
 class StudentResponse(StudentBase):
 
-    stud_id : int
+    model_config = ConfigDict(from_attributes=True)
+
+    stu_id : int
+    courses : List[CourseResponse] = []
+
+class CourseCreate(BaseModel):
+
+    stu_id : int
     course : str
 
+class CourseUpdate(BaseModel):
+
+    course : str
